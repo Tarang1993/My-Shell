@@ -1,7 +1,7 @@
 /* 
  * tsh - A tiny shell program with job control
  * 
- * @author Tarang (201101110)
+ * @author Tarang Patel (201101110@daiict.ac.in)
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -336,14 +336,14 @@ void do_bgfg(char **argv)
 
 	
 	if(!strcmp("fg", argv[0])) {
-		kill(job->pid, SIGCONT);
+		kill(-(job->pid), SIGCONT);
                 job->state = FG;
 		while(fgpid(jobs) > 0)   	// Wait untils the process is out of foreground 
                 waitfg(job->pid);	
       		}
 	else if(!strcmp("bg", argv[0])) {
                 printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
-                kill(job->pid, SIGCONT);
+                kill(-(job->pid), SIGCONT);
 		job->state = BG;
         }
         else {
@@ -362,6 +362,7 @@ void waitfg(pid_t pid)
 	return;
 }
 
+
 /*****************
  * Signal handlers
  *****************/
@@ -379,23 +380,28 @@ void sigchld_handler(int sig)
 	pid_t pid;
 
 	if ((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0) {
-		if (WIFSTOPPED(status)){
-			sigtstp_handler(20);
-			return;
-		}
+		//if (WIFSTOPPED(status)){
+		//	sigtstp_handler(20);
+		//	return;
+		//}
 
-		if (WIFSIGNALED(status)){
-			sigint_handler(2);                // If terminated by ctrl+c
-			return;
-		}
-		else if (WIFSTOPPED(status)){             // If stopped by ctrl+z
-			getjobpid(jobs,pid)->state = ST;
-			return ;
-		}
+		if (WIFSIGNALED(status)){                 // If terminated by ctrl+c
+			if(WTERMSIG(status)==SIGINT){
+				printf("Job [%d] (%d) terminated by signal %d\n",getjobpid(jobs,fgpid(jobs))->jid,fgpid(jobs),SIGINT);
+		}          
+		//return;
 	}
-	deletejob (jobs,pid);
+	else if (WIFSTOPPED(status)){             // If stopped by ctrl+z
+		getjobpid(jobs,pid)->state = ST;
+		return ;
+	}
 
-	return;
+
+
+}
+deletejob (jobs,pid);
+
+return;
 }
 
 /* 
@@ -413,7 +419,7 @@ void sigint_handler(int sig)
 
 	if(pid != 0){
 		printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, sig);
-		kill(pid, SIGKILL);
+		kill(-pid, SIGKILL);
 		deletejob(jobs, pid);
 	}
 	return;
@@ -433,8 +439,8 @@ void sigtstp_handler(int sig)
 		job = getjobpid(jobs, fpid);
 
 		printf("Job [%d] (%d) Stopped by signal %d\n", job->jid, fpid, sig);
-		kill (fpid , SIGTSTP);
 		job->state = ST;
+		kill (-fpid , SIGTSTP);
 	}
 	return;
 }
