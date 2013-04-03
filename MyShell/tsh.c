@@ -379,6 +379,11 @@ void sigchld_handler(int sig)
 	pid_t pid;
 
 	if ((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0) {
+		if (WIFSTOPPED(status)){
+			sigtstp_handler(20);
+			return;
+		}
+
 		if (WIFSIGNALED(status)){
 			sigint_handler(2);                // If terminated by ctrl+c
 			return;
@@ -402,7 +407,7 @@ void sigint_handler(int sig)
 {
 
 	pid_t pid = fgpid(jobs);  // pid of the ongoing foreground job
-        int jid = pid2jid(pid);   // jid of the ongoing foreground job
+	int jid = pid2jid(pid);   // jid of the ongoing foreground job
 
 	// send SIGINT to foreground job only
 
@@ -423,7 +428,6 @@ void sigtstp_handler(int sig)
 {
 	pid_t fpid;
 	fpid = fgpid(jobs);
-	kill(fpid , SIGTSTP);
 	if(fpid != 0){
 		struct job_t *job;
 		job = getjobpid(jobs, fpid);
