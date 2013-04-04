@@ -195,7 +195,7 @@ void eval(char *cmdline)
 		if(!bg){   // Testing for fg job
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);     // unblocking SIGCHLD signal
 			addjob(jobs, pid, FG, cmdline);            // add job to the list
-			while (pid == fgpid(jobs))
+			while (pid == fgpid(jobs))		   // wait untils the process is out of foreground
 				waitfg(pid);
 			if(getjobpid(jobs,pid) != NULL && getjobpid(jobs,pid)->state != ST){
 				kill(pid, SIGKILL);
@@ -435,7 +435,6 @@ void sigtstp_handler(int sig)
 	if(fpid != 0){
 		struct job_t *job;
 		job = getjobpid(jobs, fpid);
-
 		printf("Job [%d] (%d) Stopped by signal %d\n", job->jid, fpid, sig);
 		job->state = ST;
 		kill (-fpid , SIGTSTP);
